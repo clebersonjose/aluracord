@@ -1,26 +1,41 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import appConfig from '../config.json';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_KEY);
 
 export default function ChatPage() {
   const [mensagem, setMensagem] = useState('');
   const [listaDeMensagens, setListaDeMensagens] = useState([]);
+
+  useEffect(() => {
+    supabaseClient
+      .from('mensagens')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setListaDeMensagens(data));
+  }, []);
 
   function sendMenssage(texto) {
     if (texto === '') {
       return;
     }
 
-    const novaMensagem = {
-      id: listaDeMensagens.length + 1,
+    const mensagem = {
       de: 'clebersonjose',
       texto: texto
     }
 
-    setListaDeMensagens([
-      novaMensagem,
-      ...listaDeMensagens,
-    ]);
+    supabaseClient
+      .from('mensagens')
+      .insert(mensagem)
+      .then(({ data }) => {
+        setListaDeMensagens([
+          data[0],
+          ...listaDeMensagens,
+        ]);
+      });
 
     setMensagem('');
   }
@@ -159,7 +174,7 @@ function MessageList({ mensagens }) {
                   display: 'inline-block',
                   marginRight: '8px',
                 }}
-                src={`https://github.com/clebersonjose.png`}
+                src={`https://github.com/${mensagem.de}.png`}
               />
               <Text tag="strong">
                 {mensagem.de}
@@ -172,7 +187,7 @@ function MessageList({ mensagens }) {
                 }}
                 tag="span"
               >
-                {(new Date().toLocaleDateString())}
+                {(new Date(mensagem.created_at).toLocaleDateString())}
               </Text>
             </Box>
             {mensagem.texto}
